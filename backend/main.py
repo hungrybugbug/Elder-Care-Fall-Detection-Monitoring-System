@@ -33,10 +33,10 @@ async def process_and_stream(websocket: WebSocket):
     cap_main = cv2.VideoCapture(0)
     cap_main.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap_main.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-
+    print("Main camera initialized!!.")
     # Camera 2: Mobile Phone IP Camera (Room 105)
     # ⚠️ REPLACE WITH YOUR PHONE'S ACTUAL IP URL
-    PHONE_IP_URL = "http://192.168.100.96:8080/video" 
+    PHONE_IP_URL = "http://192.168.100.83:8080/video" 
     cap_sec = cv2.VideoCapture(PHONE_IP_URL)
     
     try:
