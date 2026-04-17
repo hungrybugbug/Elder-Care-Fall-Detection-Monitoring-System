@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+websockets
+opencv-python
+mediapipe
+numpy
+# torch  <-- Leave commented out until GPU available    

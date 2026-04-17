@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# ML Models
+backend/models/*.pkl
+backend/models/*.pt
+backend/models/*.pth
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env variables
+.env
+.env.local
