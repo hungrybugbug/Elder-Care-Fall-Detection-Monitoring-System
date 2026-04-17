@@ -12,6 +12,7 @@ function App() {
   const [telemetry, setTelemetry] = useState({ temp: 22.5, humidity: 45 });
   const wsRef = useRef(null);
   const [privacyMode, setPrivacyMode] = useState(true); // Defaults to ON for patient dignity
+  const [selectedAlert, setSelectedAlert] = useState(null);
 
   const [activityData, setActivityData] = useState([
     { time: '-50s', events: 0 }, { time: '-40s', events: 0 },
@@ -340,11 +341,14 @@ function App() {
                 <p className="text-slate-500 text-center mt-10 text-xs">System armed. Monitoring rooms...</p>
               ) : (
                 alerts.map((alert, index) => (
-                  <div key={index} className={`p-3 rounded border-l-4 text-slate-300 text-sm shadow-sm ${getAlertColor(alert.severity)}`}>
+                  <div 
+                    key={index} 
+                    onClick={() => setSelectedAlert(alert)}
+                    className={`p-3 rounded border-l-4 text-slate-300 text-sm shadow-sm cursor-pointer hover:brightness-125 transition-all ${getAlertColor(alert.severity)}`}
+                  >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-white text-xs">{alert.type}</span>
-                        {/* ROOM IDENTIFIER BADGE */}
                         <span className="bg-slate-950 border border-slate-700 text-slate-300 text-[9px] px-1.5 py-0.5 rounded font-mono">
                           Rm {alert.room || "?"}
                         </span>
@@ -353,16 +357,89 @@ function App() {
                         {new Date(alert.time * 1000).toLocaleTimeString()}
                       </span>
                     </div>
-                    <p className="text-xs opacity-90 leading-relaxed">{alert.message}</p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs opacity-90 leading-relaxed">{alert.message}</p>
+                      {/* Small icon to indicate there is video evidence */}
+                      {alert.snapshots && <span className="text-lg" title="View Evidence">📼</span>}
+                    </div>
                   </div>
                 ))
               )}
             </div>
           </div>
         </div>
-
       </div>
-    </div>
+     {/* ========================================= */}
+      {/* 🚨 PASTE THE DVR INCIDENT MODAL HERE 🚨 */}
+      {/* ========================================= */}
+      {selectedAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className={`px-6 py-4 border-b border-slate-800 flex justify-between items-center ${selectedAlert.severity === 'Critical' ? 'bg-red-950/30' : 'bg-slate-800/50'}`}>
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span>Incident Review: {selectedAlert.type}</span>
+                  <span className="text-xs font-mono bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700">Room {selectedAlert.room}</span>
+                </h2>
+                <p className="text-sm text-slate-400 mt-1">
+                  Patient: {selectedAlert.patient} • Logged at: {new Date(selectedAlert.time * 1000).toLocaleTimeString()}
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedAlert(null)}
+                className="text-slate-400 hover:text-white text-2xl font-bold p-2"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body: The 3 Snapshots */}
+            <div className="p-6">
+              <h3 className="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">Visual Evidence Timeline</h3>
+              
+              {selectedAlert.snapshots && selectedAlert.snapshots.length > 0 ? (
+                <div className="grid grid-cols-3 gap-4">
+                  {selectedAlert.snapshots.map((img, i) => (
+                    <div key={i} className="relative bg-black rounded-lg border border-slate-700 overflow-hidden aspect-video">
+                      <img src={img} alt={`Evidence frame ${i+1}`} className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" />
+                      <div className="absolute bottom-2 left-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded font-mono">
+                        Frame -0.{3 - i}s
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-32 flex items-center justify-center bg-slate-950 rounded border border-slate-800 border-dashed">
+                  <p className="text-slate-500 text-sm">No visual evidence captured for this incident.</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="mt-6 flex justify-end gap-3">
+                <button 
+                  onClick={() => setSelectedAlert(null)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-sm text-white transition-colors"
+                >
+                  Close Review
+                </button>
+                <button 
+                  onClick={() => {
+                    handleContactStaff(selectedAlert.patient, selectedAlert.room, selectedAlert.message);
+                    setSelectedAlert(null);
+                  }}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 shadow-lg rounded text-sm text-white font-bold transition-colors"
+                >
+                  🚨 Escalate This Incident
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div> // <-- This is the final closing div of the min-h-screen container
   );
 }
 

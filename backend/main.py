@@ -57,15 +57,19 @@ async def process_and_stream(websocket: WebSocket):
             # --------------------------------------------------
             annotated_main, status_main, alerts_main = analyzer_room1.process_frame(frame_main)
             
-            # Tag these alerts so the React frontend knows who they belong to
+            # Encode frame FIRST so we can put it in the buffer
+            _, img_encoded_main = cv2.imencode('.jpg', annotated_main, [cv2.IMWRITE_JPEG_QUALITY, 60])
+            main_b64 = base64.b64encode(img_encoded_main).decode('utf-8')
+            
+            # Add the current frame to the rolling memory
+            buffer_room1.append(f"data:image/jpeg;base64,{main_b64}")
+
             for alert in alerts_main:
                 alert["patient"] = "Ahmad Khan"
                 alert["room"] = "104"
+                # Attach a copy of the last 3 frames to the alert
+                alert["snapshots"] = list(buffer_room1) 
             all_alerts.extend(alerts_main)
-
-            # Encode Main Camera
-            _, buffer_main = cv2.imencode('.jpg', annotated_main, [cv2.IMWRITE_JPEG_QUALITY, 70])
-            main_b64 = base64.b64encode(buffer_main).decode('utf-8')
 
             # --------------------------------------------------
             # PROCESS ROOM 2 (Phone Camera)
