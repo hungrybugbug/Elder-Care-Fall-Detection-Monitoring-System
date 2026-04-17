@@ -42,7 +42,7 @@ class PoseAnalyzer:
         self.FILTER_FPS = 30.0 # Assumed stable FPS for filter design
         
         # Alert Cooldown State
-        self.ALERT_COOLDOWN = 5.0 # Seconds to wait before repeating the same alert
+        self.ALERT_COOLDOWN = 8.0 # Seconds to wait before repeating the same alert
         self.last_alert_time = {
             "Inactivity": 0,
             "Seizure": 0,

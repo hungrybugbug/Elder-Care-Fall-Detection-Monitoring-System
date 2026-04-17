@@ -2,6 +2,7 @@ import cv2
 import base64
 import asyncio
 import json
+from collections import deque
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from cv_modules.pose_analyzer import PoseAnalyzer
@@ -20,7 +21,9 @@ app.add_middleware(
 # Initialize your BlazePose analyzer
 analyzer_room1 = PoseAnalyzer()  # For Laptop Cam
 analyzer_room2 = PoseAnalyzer()  # For Phone Cam
-
+# Create ring buffers that hold exactly 3 frames
+buffer_room1 = deque(maxlen=3)
+buffer_room2 = deque(maxlen=3)
 # GPU Fall Detection Flag (Keep False for now)
 USE_GPU_FALL_DETECTION = False
 if USE_GPU_FALL_DETECTION:

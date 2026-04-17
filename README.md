@@ -104,13 +104,13 @@ Edit `backend/main.py`:
 - **Camera not found**: Check camera index (0 for main, 1 for external)
 - **WebSocket connection failed**: Ensure frontend and backend are on the same network
 
-## 📄 License
 
-Your license here
 
 ## 👥 Authors
 
-- Your Name
+- Mohammad Sooban
+- Umar Nadeem
+- Amaar Khan
 
 ---
 

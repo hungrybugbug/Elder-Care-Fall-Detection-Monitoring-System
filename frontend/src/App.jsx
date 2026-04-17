@@ -11,6 +11,7 @@ function App() {
   const [gpuEnabled, setGpuEnabled] = useState(false);
   const [telemetry, setTelemetry] = useState({ temp: 22.5, humidity: 45 });
   const wsRef = useRef(null);
+  const [privacyMode, setPrivacyMode] = useState(true); // Defaults to ON for patient dignity
 
   const [activityData, setActivityData] = useState([
     { time: '-50s', events: 0 }, { time: '-40s', events: 0 },
@@ -19,47 +20,33 @@ function App() {
   ]);
 
   useEffect(() => {
-    let reconnectTimer;
+    wsRef.current = new WebSocket('ws://localhost:8000/ws/video-stream');
 
-    const connectWebSocket = () => {
-      wsRef.current = new WebSocket('ws://localhost:8000/ws/video-stream');
+    wsRef.current.onopen = () => setStatus('Online');
 
-      wsRef.current.onopen = () => {
-        setStatus('Online');
-      };
+    wsRef.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.frame) setFrame(data.frame);
+      if (data.frame_sec) setFrameSec(data.frame_sec);
+      if (data.status) setStatus(data.status);
 
-      wsRef.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.frame) setFrame(data.frame);
-        if (data.frame_sec) setFrameSec(data.frame_sec);
-        if (data.status) setStatus(data.status);
-
-        if (data.alerts && data.alerts.length > 0) {
-          setAlerts((prev) => [...data.alerts, ...prev].slice(0, 50));
-          
-          setActivityData(prevData => {
-            const newData = [...prevData];
-            const lastIndex = newData.length - 1;
-            newData[lastIndex] = { 
-              ...newData[lastIndex], 
-              events: newData[lastIndex].events + data.alerts.length 
-            };
-            return newData;
-          });
-        }
-      };
-
-      wsRef.current.onclose = () => {
-        setStatus('Reconnecting...');
-        // If connection dies, try again in 3 seconds automatically
-        reconnectTimer = setTimeout(connectWebSocket, 3000);
-      };
+      if (data.alerts && data.alerts.length > 0) {
+        setAlerts((prev) => [...data.alerts, ...prev].slice(0, 50));
+        
+        setActivityData(prevData => {
+          const newData = [...prevData];
+          const lastIndex = newData.length - 1;
+          newData[lastIndex] = { 
+            ...newData[lastIndex], 
+            events: newData[lastIndex].events + data.alerts.length 
+          };
+          return newData;
+        });
+      }
     };
 
-    // Initial connection
-    connectWebSocket();
+    wsRef.current.onclose = () => setStatus('Disconnected');
 
-    // IoT Simulator
     const iotInterval = setInterval(() => {
       setTelemetry(prev => ({
         temp: prev.temp + (Math.random() * 0.4 - 0.2),
@@ -69,7 +56,6 @@ function App() {
 
     return () => {
       if (wsRef.current) wsRef.current.close();
-      clearTimeout(reconnectTimer);
       clearInterval(iotInterval);
     };
   }, []);
@@ -84,6 +70,13 @@ function App() {
     }, 10000);
     return () => clearInterval(chartTicker);
   }, []);
+
+  useEffect(() => {
+    // If a critical or warning alert happens, strip away privacy mode so staff can see
+    if (status === 'Critical' || status === 'Warning') {
+      setPrivacyMode(false);
+    }
+  }, [status]);
 
   // --- DYNAMIC DISCORD ALERT ---
   const handleContactStaff = async (patientName, roomNum, condition) => {
@@ -185,7 +178,7 @@ function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 font-sans">
       <header className="flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">CareVision AI</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight">ElderVision AI</h1>
           <p className="text-slate-400 text-sm mt-1">Multi-Room Elderly Monitoring</p>
         </div>
         <div className="flex gap-4 items-center">
@@ -228,13 +221,13 @@ function App() {
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 bg-blue-900/50 rounded-full flex items-center justify-center text-xl border border-blue-700/50">🧓🏼</div>
               <div>
-                <p className="font-bold text-base">Fatima Bibi</p>
+                <p className="font-bold text-base">Mohammad Sooban</p>
                 <p className="text-xs text-slate-400">Age 82</p>
               </div>
             </div>
             <p className="text-xs mb-3 text-slate-300"><span className="text-slate-500 font-semibold">Risk:</span> Dementia, Wandering</p>
             <button 
-              onClick={() => handleContactStaff("Fatima Bibi", "105", "Dementia, Wandering")}
+              onClick={() => handleContactStaff("Mohammad Sooban", "105", "Dementia, Wandering")}
               className="w-full py-1.5 bg-red-900/50 hover:bg-red-800/80 border border-red-700 rounded text-red-200 text-sm font-medium transition-colors">
               🚨 Escalate Alert
             </button>
@@ -272,6 +265,17 @@ function App() {
                   <span className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform ${gpuEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
                 </button>
               </div>
+              {/* NEW HIPAA PRIVACY TOGGLE */}
+          <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 shadow-inner">
+            <span className="text-xs text-slate-300 font-medium tracking-wide">Privacy Mode</span>
+            <button 
+              onClick={() => setPrivacyMode(!privacyMode)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${privacyMode ? 'bg-emerald-500' : 'bg-slate-600'}`}>
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${privacyMode ? 'translate-x-4.5' : 'translate-x-1'}`} />
+            </button>
+            <span className="text-[10px] text-slate-500 uppercase">{privacyMode ? 'Active' : 'Off'}</span>
+          </div>
+
             </div>
             
             {/* The Videos are now in an equally split Grid */}
@@ -283,7 +287,12 @@ function App() {
                   <span className="text-[10px] bg-emerald-900/50 text-emerald-400 px-1.5 rounded">AI Active</span>
                 </div>
                 <div className="bg-black aspect-video rounded flex items-center justify-center overflow-hidden">
-                  {frame ? <img src={frame} className="w-full h-full object-cover" /> : <span className="text-slate-600 text-xs">Waiting...</span>}
+                  {frame ? (
+                    <img 
+                      src={frame} 
+                      className={`w-full h-full object-cover transition-all duration-500 ${privacyMode ? 'blur-xl opacity-80' : 'blur-none opacity-100'}`} 
+                    />
+                  ) : <span className="text-slate-600 text-xs">Waiting...</span>}
                 </div>
               </div>
 
@@ -294,7 +303,12 @@ function App() {
                   <span className="text-[10px] bg-emerald-900/50 text-emerald-400 px-1.5 rounded">AI Active</span>
                 </div>
                 <div className="bg-black aspect-video rounded flex items-center justify-center overflow-hidden">
-                  {frameSec ? <img src={frameSec} className="w-full h-full object-cover" /> : <span className="text-slate-600 text-xs">Waiting...</span>}
+                  {frame ? (
+                    <img 
+                      src={frameSec} 
+                      className={`w-full h-full object-cover transition-all duration-500 ${privacyMode ? 'blur-xl opacity-80' : 'blur-none opacity-100'}`} 
+                    />
+                  ) : <span className="text-slate-600 text-xs">Waiting...</span>}
                 </div>
               </div>
             </div>
