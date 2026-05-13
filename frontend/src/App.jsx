@@ -30,6 +30,10 @@ function App() {
       if (data.frame) setFrame(data.frame);
       if (data.frame_sec) setFrameSec(data.frame_sec);
       if (data.status) setStatus(data.status);
+      if (data.telemetry) {
+        // Just grabbing Room 104's data for the main UI widgets
+        setTelemetry(data.telemetry["104"]);
+      }
 
       if (data.alerts && data.alerts.length > 0) {
         setAlerts((prev) => [...data.alerts, ...prev].slice(0, 50));
@@ -48,17 +52,17 @@ function App() {
 
     wsRef.current.onclose = () => setStatus('Disconnected');
 
-    const iotInterval = setInterval(() => {
-      setTelemetry(prev => ({
-        temp: prev.temp + (Math.random() * 0.4 - 0.2),
-        humidity: prev.humidity + (Math.random() * 1 - 0.5)
-      }));
-    }, 3000);
+    // const iotInterval = setInterval(() => {
+    //   setTelemetry(prev => ({
+    //     temp: prev.temp + (Math.random() * 0.4 - 0.2),
+    //     humidity: prev.humidity + (Math.random() * 1 - 0.5)
+    //   }));
+    // }, 3000);
 
-    return () => {
-      if (wsRef.current) wsRef.current.close();
-      clearInterval(iotInterval);
-    };
+    // return () => {
+    //   if (wsRef.current) wsRef.current.close();
+    //   clearInterval(iotInterval);
+    // };
   }, []);
 
   useEffect(() => {
@@ -234,17 +238,25 @@ function App() {
             </button>
           </div>
 
-          {/* IoT Telemetry */}
+          {/* IoT Telemetry (Wearable Vitals) */}
           <div className="bg-slate-900 rounded-xl p-4 border border-slate-800 shadow-xl">
-            <h2 className="text-sm font-semibold mb-3 text-slate-400">Facility Environment</h2>
+            <h2 className="text-sm font-semibold mb-3 text-slate-400 flex items-center gap-2">
+              <span>⌚ Wearable Vitals</span>
+            </h2>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-slate-950 p-3 rounded border border-slate-800 text-center">
-                <p className="text-slate-500 text-[10px] uppercase">Avg Temp</p>
-                <p className="text-xl font-bold text-emerald-400">{telemetry.temp.toFixed(1)}°C</p>
+                <p className="text-slate-500 text-[10px] uppercase tracking-wider">Body Temp</p>
+                {/* Safe render + Fever color logic */}
+                <p className={`text-xl font-bold ${telemetry?.body_temp > 37.8 ? 'text-red-400 animate-pulse' : 'text-emerald-400'}`}>
+                  {telemetry?.body_temp != null ? `${telemetry.body_temp.toFixed(1)}°C` : '--.-°C'}
+                </p>
               </div>
               <div className="bg-slate-950 p-3 rounded border border-slate-800 text-center">
-                <p className="text-slate-500 text-[10px] uppercase">Humidity</p>
-                <p className="text-xl font-bold text-blue-400">{telemetry.humidity.toFixed(0)}%</p>
+                <p className="text-slate-500 text-[10px] uppercase tracking-wider">SpO2 (Oxygen)</p>
+                {/* Safe render + Low oxygen color logic */}
+                <p className={`text-xl font-bold ${telemetry?.spo2 < 94 ? 'text-red-500 animate-pulse' : 'text-blue-400'}`}>
+                  {telemetry?.spo2 != null ? `${telemetry.spo2.toFixed(0)}%` : '--%'}
+                </p>
               </div>
             </div>
           </div>
